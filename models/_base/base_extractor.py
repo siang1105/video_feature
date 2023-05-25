@@ -76,6 +76,8 @@ class BaseExtractor(object):
             return
 
         for key, value in feats_dict.items():
+            if key == 'fps' or key == 'timestamps_ms':
+                continue
             if self.on_extraction == 'print':
                 print(key)
                 print(value)
@@ -88,6 +90,7 @@ class BaseExtractor(object):
                 if key != 'fps' and len(value) == 0:
                     print(f'Warning: the value is empty for {key} @ {fpath}')
                 # save the info behind the each key
+                print(key)
                 action2savefn[self.on_extraction](fpath, value)
             else:
                 raise NotImplementedError(f'on_extraction: {self.on_extraction} is not implemented')
