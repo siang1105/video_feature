@@ -1,2 +1,5 @@
+**/__pycache__/**
 *.log
 video/*
+output/**
+tmp/**
