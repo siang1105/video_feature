@@ -7,19 +7,21 @@ import time
 from termcolor import colored
 import os
 import glob
-import torch
+# import torch
 
 CSV_FILE = 'anet_video.csv'
 LOGFOLDER = os.path.join("log", time.strftime("%Y-%m-%d", time.localtime()))
-FEATUREPATH = "/home/u8637030/VLCAP/data/clip/ViT-B_32"
-NUM_OF_DEVICE = torch.cuda.device_count()
+FEATUREPATH = "/home/u8637030/repo/VLCAP/data/resnet/resnet50"
+# NUM_OF_DEVICE = torch.cuda.device_count()
+NUM_OF_DEVICE = 4
+LOGFILE = os.path.join("log", "log-" + time.strftime("%Y-%m-%d", time.localtime()) + ".log")
 
 def checkFileExist(video_id):
-    return os.path.isfile(os.path.join(FEATUREPATH, "v__" + video_id + "_clip" + ".npy"))
+    return os.path.isfile(os.path.join(FEATUREPATH, "v_" + video_id + "_clip" + ".npy"))
 
 def validFeature(video_id):
     try:
-        data = np.load(os.path.join(FEATUREPATH, "v__" + video_id + "_clip" + ".npy"))
+        data = np.load(os.path.join(FEATUREPATH, "v_" + video_id + "_clip" + ".npy"))
         if isinstance(data, np.ndarray) and data.size > 0:
             return True
     except Exception:
@@ -46,12 +48,11 @@ def extractFeature(ydl, urls, cuda, video_id, results, i):
         print(colored(f"DONE: {video_id}", "green"))
     except Exception as e:
         # Error: 1. Video not found 2. Video is private 3. Video is deleted
+        print(colored(e, "red"))
         errorMsg = re.sub('\033\[.*?m', '', str(e)).split("ERROR:")[1].strip().split("\n")[0]
         results[i] = f"{video_id},Error,{errorMsg}\n"
     
-    files = glob.glob(os.path.join("video", "v__" + video_id + ".*"))
-    files += glob.glob(os.path.join("video", "v__" + video_id + ".webm.*"))
-    files += glob.glob(os.path.join("video", "v__" + video_id + ".mp4.*"))
+    files = glob.glob(os.path.join("video", "v_" + video_id + "*"))
     if len(files) > 0:
         subprocess.Popen(["rm"] + files, stdout=subprocess.PIPE).wait()
 
@@ -62,24 +63,29 @@ if __name__ == '__main__':
 
     ydl_opts = {
         'format': 'bestvideo/best',
-        'outtmpl': 'video/v__%(id)s.%(ext)s', 
+        'outtmpl': 'video/v_%(id)s.%(ext)s', 
         'quiet': False,
         'no_warnings': True,
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
+        'format': 'bestvideo[ext=mp4]/mp4',
     }
     ydl = youtube_dl.YoutubeDL(ydl_opts)
+
     with open(CSV_FILE, 'r') as file:
-        with open("log.txt", "a+") as log:
+        with open(LOGFILE, "a+") as log:
             log.write("-" * 20 + "\n")
             log.write(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "\n")
         
         num_of_success, num_of_error = 0, 0
         results = [None] * n
         
-        print(colored(f"Extracting {n} videos", "blue"))
-        print(colored(f"Using {NUM_OF_DEVICE} GPUs", "blue"))
+        skip = 0
+        for i in range(skip):
+            file.readline()
 
-        for i in range(0, n, NUM_OF_DEVICE):
+        print(colored(f"Extracting {n-skip} videos", "blue"))
+        print(colored(f"Using {NUM_OF_DEVICE} GPUs", "blue"))
+        
+        for i in range(skip, n, NUM_OF_DEVICE):
             threads = []
         
             for j in range(NUM_OF_DEVICE):
@@ -96,8 +102,8 @@ if __name__ == '__main__':
             for k, thread in enumerate(threads):
                 thread.join()
                 if results[i+k] != None:
-                    with open("log.txt", "a+") as log:
-                        log.write(results[i+k])
+                    with open(LOGFILE, "a+") as log:
+                        log.write(str(i+k) + ',' + results[i+k])
                     if "Error" in results[i+k]:
                         num_of_error += 1
                     else:
@@ -105,7 +111,7 @@ if __name__ == '__main__':
 
         print(colored(f"Success: {num_of_success}", "green"))
         print(colored(f"Error: {num_of_error}", "red"))
-        with open("log.txt", "a+") as log:
+        with open(LOGFILE, "a+") as log:
             log.write("All Done\n")
             log.write(f"Success: {num_of_success}, Error: {num_of_error}\n")
 
