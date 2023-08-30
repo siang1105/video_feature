@@ -1,0 +1,14 @@
+# Model
+feature_type: 'resnet'
+
+# Extraction Parameters
+on_extraction: 'save_numpy'
+output_path: '/home/u8637030/repo/VLCAP/data'
+tmp_path: '/work/u8637030/tmp'
+extraction_fps: 5
+
+# Extract Feature Parameters
+video_list: './anet_video.csv'
+skip: 0
+reverse: False
+num_of_device: 4
